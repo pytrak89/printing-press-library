@@ -405,6 +405,29 @@
       }
     },
     {
+      "name": "clickup",
+      "category": "project-management",
+      "api": "Clickup",
+      "description": "Every ClickUp v2 + v3 endpoint as a typed CLI plus offline sync, search, and ergonomic chat/docs aliases.",
+      "path": "library/project-management/clickup",
+      "printer": "kjmagnan1s",
+      "printer_name": "Kevin Magnan",
+      "mcp": {
+        "binary": "clickup-pp-mcp",
+        "transports": [
+          "stdio"
+        ],
+        "tool_count": 172,
+        "public_tool_count": 0,
+        "auth_type": "api_key",
+        "env_vars": [
+          "CLICKUP_AUTHORIZATION_TOKEN"
+        ],
+        "mcp_ready": "full",
+        "spec_format": "openapi3"
+      }
+    },
+    {
       "name": "cloud-run-admin",
       "category": "cloud",
       "api": "Google Cloud Run",
