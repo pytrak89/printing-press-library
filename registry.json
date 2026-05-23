@@ -6592,6 +6592,58 @@
       }
     },
     {
+      "name": "strava",
+      "category": "productivity",
+      "api": "Strava",
+      "description": "Every Strava feature, plus offline analytics — training load, power curves, zone time",
+      "search_terms": [
+        "strava",
+        "strava-pp-cli",
+        "Every Strava feature, plus offline analytics — training load, power curves, zone time, and segment progression — that the website can't show you.",
+        "Segment Effort Progression",
+        "segments progress",
+        "See your entire effort history on a segment — date, time, avg power, avg HR, delta from PR — so you can track if you're actually improving.",
+        "Training Load Timeline (CTL/ATL/TSB)",
+        "training load",
+        "See your Chronic Training Load, Acute Training Load, and Training Stress Balance as sparklines so you can spot overtraining or undertaper before a race.",
+        "Zone Time Distribution",
+        "training zones",
+        "See how many minutes per week you actually spent in each heart rate or power zone, so you can tell if your training distribution matches your plan.",
+        "Power Curve",
+        "athlete power-curve",
+        "See your best mean power for every standard duration (1s to 60min) so you can identify strengths, weaknesses, and fitness changes across seasons.",
+        "HR Drift Detector",
+        "activities drift",
+        "Measure aerobic decoupling in an activity — the ratio of HR rise to pace drop in the second half — to assess aerobic fitness without lab testing.",
+        "Bulk Activity Updater",
+        "activities bulk-update",
+        "Update gear, name template, or description across hundreds of activities at once with a preview-before-commit safety net.",
+        "Gear Retirement Tracker",
+        "gear status",
+        "See total mileage on each shoe and bike, your configured replacement threshold, and an estimated retirement date based on your recent usage rate.",
+        "KOM Gap Tracker",
+        "segments kom-gap",
+        "See exactly how far you are from the KOM on each starred segment, ranked by the gap you're most likely to close."
+      ],
+      "path": "library/productivity/strava",
+      "printer": "azaaron",
+      "printer_name": "azaaron",
+      "mcp": {
+        "binary": "strava-pp-mcp",
+        "transports": [
+          "stdio"
+        ],
+        "tool_count": 34,
+        "public_tool_count": 0,
+        "auth_type": "bearer_token",
+        "env_vars": [
+          "STRAVA_STRAVA_OAUTH"
+        ],
+        "mcp_ready": "full",
+        "spec_format": "openapi3"
+      }
+    },
+    {
       "name": "stripe",
       "category": "payments",
       "api": "Stripe",
