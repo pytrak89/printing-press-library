@@ -1807,6 +1807,41 @@
       }
     },
     {
+      "name": "defillama",
+      "category": "other",
+      "api": "Defillama",
+      "description": "DefiLlama offers two ways to use our data with AI:",
+      "search_terms": [
+        "defillama",
+        "defillama-pp-cli",
+        "DefiLlama offers two ways to use our data with AI:",
+        "Compound workflows",
+        "defillama-pp-cli workflow",
+        "Run multi-step DefiLlama workflows that combine API operations for agent-friendly analysis.",
+        "Offline analytics",
+        "defillama-pp-cli analytics",
+        "Query locally synced DefiLlama data for repeatable analysis without re-fetching every endpoint.",
+        "Live/local search",
+        "defillama-pp-cli search",
+        "Search across synced DefiLlama data or live API resources from one command."
+      ],
+      "path": "library/other/defillama",
+      "printer": "kierandotai",
+      "printer_name": "kierandotai",
+      "mcp": {
+        "binary": "defillama-pp-mcp",
+        "transports": [
+          "stdio"
+        ],
+        "tool_count": 114,
+        "public_tool_count": 114,
+        "auth_type": "none",
+        "env_vars": [],
+        "mcp_ready": "full",
+        "spec_format": "openapi3"
+      }
+    },
+    {
       "name": "delta-trip",
       "category": "travel",
       "api": "Delta Trip Management",
@@ -2384,6 +2419,42 @@
         ],
         "mcp_ready": "full",
         "spec_format": "openapi3"
+      }
+    },
+    {
+      "name": "elezioni-sicilia",
+      "category": "other",
+      "api": "Elezioni Sicilia",
+      "description": "Dati elettorali siciliani da riga di comando — senza copiare tabelle HTML.",
+      "search_terms": [
+        "elezioni-sicilia",
+        "Elezioni Sicilia",
+        "elezioni-sicilia-pp-cli",
+        "Dati elettorali comunali siciliani da riga di comando — affluenza, candidati, liste, risultati in JSON o tabella.",
+        "Confronto storico",
+        "storico",
+        "Confronta affluenza, voti e candidati di uno stesso comune in tutti gli anni disponibili (2009-2026).",
+        "Riepilogo regionale",
+        "riepilogo",
+        "Mostra affluenza e stato scrutini per tutte le 9 province siciliane in un unico output strutturato.",
+        "Monitoraggio scrutini",
+        "watch",
+        "Polling periodico dello stato scrutini per tutti i comuni, con alert su avanzamento."
+      ],
+      "path": "library/other/elezioni-sicilia",
+      "printer": "aborruso",
+      "printer_name": "aborruso",
+      "mcp": {
+        "binary": "elezioni-sicilia-pp-mcp",
+        "transports": [
+          "stdio"
+        ],
+        "tool_count": 6,
+        "public_tool_count": 6,
+        "auth_type": "none",
+        "env_vars": [],
+        "mcp_ready": "full",
+        "spec_format": "internal"
       }
     },
     {
