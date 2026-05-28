@@ -74,7 +74,7 @@ func newComposeCmd(flags *rootFlags) *cobra.Command {
 				}
 				spec := filepath.Join(cf.outDir, fmt.Sprintf("step-%02d-%s.{ext}", i, dirSafe(st.To)))
 				res, err := submitAndAwait(ctx, c, submitRequest{
-					modelID: st.Model, inputs: inputs, estimatePrice: true,
+					modelID: st.Model, inputs: inputs, estimatePrice: true, priceBestEffort: true,
 					wait: true, waitTimeout: 5 * time.Minute, pollInitial: 2 * time.Second,
 					download: true, downloadSpec: spec,
 				})

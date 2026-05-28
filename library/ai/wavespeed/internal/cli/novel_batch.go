@@ -207,7 +207,7 @@ func batchExecute(cmd *cobra.Command, c *client.Client, project wavespeedProject
 			res, err := submitAndAwait(ctx, c, submitRequest{
 				modelID:       s.Model,
 				inputs:        s.toModelInputs(),
-				estimatePrice: true,
+				estimatePrice: true, priceBestEffort: true,
 				wait:          true,
 				waitTimeout:   5 * time.Minute,
 				pollInitial:   2 * time.Second,

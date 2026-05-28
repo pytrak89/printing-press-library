@@ -336,9 +336,7 @@ func packExecute(cmd *cobra.Command, c *client.Client, project wavespeedProjectC
 			env.Warnings = append(env.Warnings, outcomes[i].Warning)
 		}
 	}
-	for _, m := range manifests {
-		env.Warnings = append(env.Warnings, fmt.Sprintf("manifest: %s", m))
-	}
+	env.Manifests = manifests
 
 	if failure || costCeilingHit {
 		env.PartialFailure = true
@@ -382,7 +380,7 @@ func produceShot(ctx context.Context, c *client.Client, pf packFlags, slug strin
 	res, err := submitAndAwait(ctx, c, submitRequest{
 		modelID:      s.Model,
 		inputs:       s.toModelInputs(),
-		estimatePrice: true,
+		estimatePrice: true, priceBestEffort: true,
 		wait:         true,
 		waitTimeout:  5 * time.Minute,
 		pollInitial:  2 * time.Second,

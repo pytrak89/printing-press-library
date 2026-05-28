@@ -265,6 +265,9 @@ func llmBriefToShots(ctx context.Context, c *client.Client, model, brief string,
 	if err != nil {
 		return nil, err
 	}
+	if res.Failed {
+		return nil, fmt.Errorf("planner prediction failed with status %q", res.Status)
+	}
 	text := extractTextOutput(res.Result)
 	shots, err := parseShotsFromText(text)
 	if err != nil {

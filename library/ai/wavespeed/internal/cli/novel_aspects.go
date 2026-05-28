@@ -89,7 +89,7 @@ func newAspectsCmd(flags *rootFlags) *cobra.Command {
 				}
 				spec := filepath.Join(af.outDir, fmt.Sprintf("aspect-%s.{ext}", strings.ReplaceAll(aspect, ":", "x")))
 				res, err := submitAndAwait(ctx, c, submitRequest{
-					modelID: model, inputs: inputs, estimatePrice: true,
+					modelID: model, inputs: inputs, estimatePrice: true, priceBestEffort: true,
 					wait: true, waitTimeout: 5 * time.Minute, pollInitial: 2 * time.Second,
 					download: true, downloadSpec: spec,
 				})

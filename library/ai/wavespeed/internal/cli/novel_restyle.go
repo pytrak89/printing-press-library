@@ -75,7 +75,7 @@ func newRestyleCmd(flags *rootFlags) *cobra.Command {
 			}
 			spec := filepath.Join(rf.outDir, "restyled.{ext}")
 			res, err := submitAndAwait(cmd.Context(), c, submitRequest{
-				modelID: model, inputs: inputs, estimatePrice: true,
+				modelID: model, inputs: inputs, estimatePrice: true, priceBestEffort: true,
 				wait: true, waitTimeout: 5 * time.Minute, pollInitial: 2 * time.Second,
 				download: true, downloadSpec: spec,
 			})

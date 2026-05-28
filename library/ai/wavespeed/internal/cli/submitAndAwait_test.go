@@ -169,6 +169,41 @@ func TestSubmitAndAwaitEstimatesPrice(t *testing.T) {
 	}
 }
 
+// TestSubmitAndAwaitPriceBestEffort proves a pricing-endpoint failure does NOT
+// abort generation when priceBestEffort is set (producers), but does surface
+// the error when it is not (run --price).
+func TestSubmitAndAwaitPriceBestEffort(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/model/pricing" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"id":"task-1","status":"created"}}`))
+	}))
+	defer ts.Close()
+	c := newTestClient(ts.URL)
+
+	// Best-effort: pricing 5xx is swallowed, generation proceeds.
+	res, err := submitAndAwait(context.Background(), c, submitRequest{
+		modelID: "m", inputs: map[string]any{"prompt": "x"},
+		estimatePrice: true, priceBestEffort: true,
+	})
+	if err != nil {
+		t.Fatalf("best-effort pricing failure should not abort generation: %v", err)
+	}
+	if len(res.Result) == 0 {
+		t.Fatalf("expected a generation result")
+	}
+
+	// Non-best-effort: the pricing failure is fatal (run --price semantics).
+	if _, err := submitAndAwait(context.Background(), c, submitRequest{
+		modelID: "m", inputs: map[string]any{"prompt": "x"}, estimatePrice: true,
+	}); err == nil {
+		t.Fatalf("expected pricing failure to surface when priceBestEffort is false")
+	}
+}
+
 // TestRecordRunGenerationFailureIsReturnedNotPanicked proves a library write
 // failure is surfaced as a returned error (which run logs and continues on),
 // never a panic or command abort.

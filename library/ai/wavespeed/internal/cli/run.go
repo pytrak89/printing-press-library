@@ -1296,11 +1296,17 @@ type submitRequest struct {
 	modelID       string
 	inputs        map[string]any
 	estimatePrice bool
-	wait          bool
-	waitTimeout   time.Duration
-	pollInitial   time.Duration
-	download      bool
-	downloadSpec  string
+	// priceBestEffort makes a pricing-endpoint failure non-fatal: the
+	// generation proceeds with no pricing rather than aborting. Producers
+	// (pack/batch/variants/compose/refine) set this because pricing is only
+	// for cost tracking; `run --price` leaves it false so an explicit price
+	// request still surfaces the error.
+	priceBestEffort bool
+	wait            bool
+	waitTimeout     time.Duration
+	pollInitial     time.Duration
+	download        bool
+	downloadSpec    string
 }
 
 // submitResult is the structured outcome of submitAndAwait. It prints nothing
@@ -1331,10 +1337,15 @@ func submitAndAwait(ctx context.Context, c *client.Client, req submitRequest) (s
 			"model_id": req.modelID,
 			"inputs":   req.inputs,
 		})
-		if err != nil {
+		switch {
+		case err == nil:
+			res.Pricing = pricing
+		case req.priceBestEffort:
+			// Pricing is advisory for cost tracking; a transient failure must
+			// not abort the generation. Proceed with no pricing.
+		default:
 			return res, err
 		}
-		res.Pricing = pricing
 	}
 
 	result, _, err := c.PostWithParams(ctx, modelRunPath(req.modelID), nil, req.inputs)

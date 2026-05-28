@@ -78,7 +78,11 @@ type AgentEnvelope struct {
 	Results             []any    `json:"results"`
 	SuggestedNext       []string `json:"suggested_next,omitempty"`
 	RecommendedAction   string   `json:"recommended_action,omitempty"`
-	Warnings            []string `json:"warnings,omitempty"`
+	// Manifests lists per-platform manifest.json paths a producer wrote. Kept
+	// distinct from Warnings so agents don't misread successful output as a
+	// problem.
+	Manifests []string `json:"manifests,omitempty"`
+	Warnings  []string `json:"warnings,omitempty"`
 	LibraryRecordErrors []string `json:"library_record_errors"`
 	CostSpent           float64  `json:"cost_spent"`
 	BalanceAfter        *float64 `json:"balance_after,omitempty"`

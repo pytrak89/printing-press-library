@@ -197,7 +197,7 @@ func variantsExecute(cmd *cobra.Command, c *client.Client, project wavespeedProj
 			s := shots[i]
 			spec := filepath.Join(vf.outDir, fmt.Sprintf("variant-%03d.{ext}", i))
 			res, err := submitAndAwait(ctx, c, submitRequest{
-				modelID: s.Model, inputs: s.toModelInputs(), estimatePrice: true,
+				modelID: s.Model, inputs: s.toModelInputs(), estimatePrice: true, priceBestEffort: true,
 				wait: true, waitTimeout: 5 * time.Minute, pollInitial: 2 * time.Second,
 				download: true, downloadSpec: spec,
 			})
