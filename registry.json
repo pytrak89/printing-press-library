@@ -382,6 +382,10 @@
       "path": "library/travel/alltrails",
       "printer": "zaydiscold",
       "printer_name": "zaydiscold",
+      "creator": {
+        "handle": "zaydiscold",
+        "name": "zaydiscold"
+      },
       "mcp": {
         "binary": "alltrails-pp-mcp",
         "transports": [
