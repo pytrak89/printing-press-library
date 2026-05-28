@@ -40,6 +40,9 @@ func TestNovelCustomerReports(t *testing.T) {
 		t.Fatalf("repeat-rate customers/repeaters = %v/%v, want 3/2", repeat["customers"], repeat["repeaters"])
 	}
 	assertFloat(t, repeat["repeat_rate_pct"], 66.67)
+	monthly := arr(repeat["monthly"])
+	lastMonth := obj(monthly[len(monthly)-1])
+	assertFloat(t, lastMonth["repeat_rate_pct"], 66.67)
 
 	churn := arr(runNovelReport(t, seed.DBPath, "customer-churn-risk", "--days", "3650", "--limit", "10"))
 	c1churn := findRow(t, churn, "customer_id", "gid://shopify/Customer/1")

@@ -136,7 +136,7 @@ func newReportRepeatRateCmd(flags *rootFlags) *cobra.Command {
 		if err := db.DB().QueryRow(base).Scan(&customers, &repeaters); err != nil {
 			return err
 		}
-		trendQ := fmt.Sprintf(`WITH per AS (SELECT substr(created_at,1,7) month, json_extract(data,'%s') cid, COUNT(*) orders FROM orders WHERE %s AND json_extract(data,'%s') IS NOT NULL GROUP BY month,cid) SELECT month, COUNT(*), SUM(CASE WHEN orders>1 THEN 1 ELSE 0 END) FROM per GROUP BY month ORDER BY month`, jsonCustomerID, windowClause(days), jsonCustomerID)
+		trendQ := fmt.Sprintf(`WITH windowed AS (SELECT substr(created_at,1,7) month, created_at, json_extract(data,'%s') cid FROM orders WHERE %s AND json_extract(data,'%s') IS NOT NULL), months AS (SELECT month, date(month || '-01','+1 month') cutoff FROM windowed GROUP BY month), customer_month AS (SELECT months.month, windowed.cid, COUNT(*) orders_to_date FROM months JOIN windowed ON windowed.created_at < months.cutoff GROUP BY months.month, windowed.cid) SELECT month, COUNT(*), SUM(CASE WHEN orders_to_date>1 THEN 1 ELSE 0 END) FROM customer_month GROUP BY month ORDER BY month`, jsonCustomerID, windowClause(days), jsonCustomerID)
 		type trend struct {
 			Month         string  `json:"month"`
 			Customers     int     `json:"customers"`
