@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/mvanhorn/printing-press-library/library/other/elezioni-sicilia/internal/scraper/htmlparse"
 )
 
 // AffluenzaRilevamento holds voter turnout data for one time slot.
@@ -23,22 +25,13 @@ type AffluenzaComune struct {
 	Rilevamenti []AffluenzaRilevamento `json:"rilevamenti"`
 }
 
-// tagRe strips HTML tags from a string.
-var tagRe = regexp.MustCompile(`<[^>]+>`)
-var entityRe = regexp.MustCompile(`&[a-zA-Z]+;`)
+// Aliases for the shared htmlparse symbols, kept short for call-site brevity.
+var (
+	cleanCell = htmlparse.CleanCell
+	trRe      = htmlparse.TrRe
+	tdRe      = htmlparse.TdRe
+)
 
-func cleanCell(s string) string {
-	s = tagRe.ReplaceAllString(s, "")
-	s = strings.ReplaceAll(s, "&nbsp;", " ")
-	s = strings.ReplaceAll(s, "&amp;", "&")
-	s = strings.ReplaceAll(s, "&#039;", "'")
-	s = strings.TrimSpace(s)
-	return s
-}
-
-// trRe matches a table row
-var trRe = regexp.MustCompile(`(?is)<tr[^>]*>(.*?)</tr>`)
-var tdRe = regexp.MustCompile(`(?is)<t[dh][^>]*>(.*?)</t[dh]>`)
 var provRe = regexp.MustCompile(`(?i)Provincia di ([A-Z]+)\s*\(([A-Z]+)\)`)
 
 // FetchAffluenza fetches and parses the regional affluenza table for a given year.

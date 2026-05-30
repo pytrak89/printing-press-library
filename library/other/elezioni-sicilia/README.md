@@ -78,6 +78,10 @@ elezioni-sicilia-pp-cli candidati Agrigento --json
 # Confronto affluenza dal 2009 al 2026
 elezioni-sicilia-pp-cli storico Agrigento --json
 
+
+# Elezioni regionali (ARS) — Presidente 2022 con liste collegate
+elezioni-sicilia-pp-cli regionali presidente --anno 2022 --json
+
 ```
 
 ## Unique Features
@@ -152,6 +156,27 @@ Risultati finali delle elezioni per comune (disponibile a scrutinio completato).
 Ripartizione dei seggi consiliari per lista.
 
 - **`elezioni-sicilia-pp-cli seggi get`** - Ripartizione seggi in Consiglio Comunale per ogni lista.
+
+### regionali
+
+Dati delle elezioni regionali siciliane (Assemblea Regionale Siciliana — ARS). Anni supportati: **2017** e **2022**.
+
+- **`elezioni-sicilia-pp-cli regionali presidente [--anno 2022]`** - Voti per ciascun candidato Presidente della Regione, con lista regionale e liste provinciali collegate (voti, %, seggi).
+- **`elezioni-sicilia-pp-cli regionali affluenza [--anno 2022]`** - Affluenza per ogni provincia con 3 rilevamenti orari (12:00, 19:00, 22-23:00) e confronto con la tornata precedente.
+- **`elezioni-sicilia-pp-cli regionali seggi [--anno 2022]`** - Riparto seggi per lista provinciale: matrice 9 colonne provincia + totale regionale.
+- **`elezioni-sicilia-pp-cli regionali listino [--anno 2022]`** - Candidati del listino regionale per ciascuna lista (il capolista è il candidato Presidente).
+- **`elezioni-sicilia-pp-cli regionali candidati --provincia CT [--anno 2022]`** - Voti di preferenza dei candidati ARS in una provincia, raggruppati per lista provinciale.
+
+```bash
+# Voti dei candidati Presidente alle regionali 2022
+elezioni-sicilia-pp-cli regionali presidente --anno 2022 --json
+
+# Affluenza regionale 2017 con confronto
+elezioni-sicilia-pp-cli regionali affluenza --anno 2017
+
+# Voti preferenza ARS a Catania nel 2022
+elezioni-sicilia-pp-cli regionali candidati --provincia CT --anno 2022 --json
+```
 
 
 ## Output Formats

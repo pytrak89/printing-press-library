@@ -2,8 +2,9 @@ package scraper
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
+
+	"github.com/mvanhorn/printing-press-library/library/other/elezioni-sicilia/internal/scraper/htmlparse"
 )
 
 // Lista represents a party list linked to a mayoral candidate.
@@ -35,12 +36,10 @@ type RiportoListe struct {
 	Candidati []CandidatoConListe `json:"candidati"`
 }
 
-// tableRe matches a full <table>...</table> block.
-var tableRe = regexp.MustCompile(`(?is)<table[^>]*>(.*?)</table>`)
-
-// wsRe collapses runs of whitespace to a single space (used to normalise cells
-// where <br> stripping leaves double spaces, e.g. "Sindaco  Eletto").
-var wsRe = regexp.MustCompile(`\s+`)
+var (
+	tableRe = htmlparse.TableRe
+	wsRe    = htmlparse.WsRe
+)
 
 // FetchListe fetches and parses the liste page for a comune.
 func FetchListe(comune *Comune, anno int) (*RiportoListe, string, error) {

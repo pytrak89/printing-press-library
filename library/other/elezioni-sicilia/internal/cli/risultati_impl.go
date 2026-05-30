@@ -45,16 +45,6 @@ func newRisultatiCmd(flags *rootFlags) *cobra.Command {
 				return fmt.Errorf("risultati: %w", err)
 			}
 
-			if result.Stato == scraper.ScrutinioInCorso {
-				fmt.Fprintf(cmd.OutOrStdout(), "Scrutini ancora in corso per %s (%d). Usa 'stato' per monitorare l'avanzamento.\n",
-					comune.Nome, anno)
-				if flags.asJSON {
-					data, _ := json.MarshalIndent(result, "", "  ")
-					fmt.Fprintln(cmd.OutOrStdout(), string(data))
-				}
-				return nil
-			}
-
 			if flags.asJSON || (!isTerminal(cmd.OutOrStdout()) && !flags.csv) {
 				out := map[string]any{
 					"meta": map[string]any{"source": srcURL},
@@ -65,6 +55,12 @@ func newRisultatiCmd(flags *rootFlags) *cobra.Command {
 					data = filterFields(data, flags.selectFields)
 				}
 				fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				return nil
+			}
+
+			if result.Stato == scraper.ScrutinioInCorso {
+				fmt.Fprintf(cmd.OutOrStdout(), "Scrutini ancora in corso per %s (%d). Usa 'stato' per monitorare l'avanzamento.\n",
+					comune.Nome, anno)
 				return nil
 			}
 

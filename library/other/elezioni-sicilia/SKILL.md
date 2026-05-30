@@ -108,6 +108,14 @@ This CLI uses standard HTTP transport with HTTP/2 disabled for browser-facing en
 
 - `elezioni-sicilia-pp-cli seggi` — Ripartizione seggi in Consiglio Comunale per ogni lista.
 
+**regionali** — Dati delle elezioni regionali siciliane (ARS). Anni: 2017, 2022.
+
+- `elezioni-sicilia-pp-cli regionali presidente [--anno 2022]` — Candidati Presidente con lista regionale e liste provinciali collegate (voti, %, seggi).
+- `elezioni-sicilia-pp-cli regionali affluenza [--anno 2022]` — Affluenza per provincia con 3 rilevamenti orari e confronto con tornata precedente.
+- `elezioni-sicilia-pp-cli regionali seggi [--anno 2022]` — Riparto seggi per lista provinciale (matrice 9 province + totale).
+- `elezioni-sicilia-pp-cli regionali listino [--anno 2022]` — Candidati del listino regionale per ciascuna lista (capolista = Presidente).
+- `elezioni-sicilia-pp-cli regionali candidati --provincia CT [--anno 2022]` — Voti di preferenza ARS in una provincia.
+
 
 **Hand-written commands**
 
@@ -118,6 +126,11 @@ This CLI uses standard HTTP transport with HTTP/2 disabled for browser-facing en
 - `elezioni-sicilia-pp-cli risultati <comune> [--provincia AG] [--anno 2026]` — Mostra il risultato finale delle elezioni in un comune (richiede scrutinio completato).
 - `elezioni-sicilia-pp-cli seggi <comune> [--provincia AG] [--anno 2026]` — Mostra la ripartizione dei seggi consiliari in un comune.
 - `elezioni-sicilia-pp-cli stato <comune> [--provincia AG] [--anno 2026]` — Controlla lo stato dello scrutinio: in corso, parziale (N/M sezioni), o completo.
+- `elezioni-sicilia-pp-cli regionali presidente [--anno 2022]` — Voti dei candidati Presidente della Regione (ARS), con lista regionale e liste provinciali collegate. Anni: 2017, 2022.
+- `elezioni-sicilia-pp-cli regionali affluenza [--anno 2022]` — Affluenza regionale per provincia con 3 rilevamenti orari e confronto con elezione precedente.
+- `elezioni-sicilia-pp-cli regionali seggi [--anno 2022]` — Riparto seggi ARS per lista (matrice provincia × lista).
+- `elezioni-sicilia-pp-cli regionali listino [--anno 2022]` — Candidati del listino regionale.
+- `elezioni-sicilia-pp-cli regionali candidati --provincia <XX> [--anno 2022]` — Voti di preferenza dei candidati ARS in una provincia.
 
 
 ### Finding the right command
@@ -164,6 +177,22 @@ elezioni-sicilia-pp-cli storico Messina --json
 ```
 
 Serie temporale del voto dal 2009 al 2026
+
+### Regionali — Presidente con liste collegate
+
+```bash
+elezioni-sicilia-pp-cli regionali presidente --anno 2022 --json
+```
+
+Per ogni candidato Presidente: voti, %, lista regionale, e tutte le liste provinciali collegate (voti, %, seggi).
+
+### Regionali — Voti di preferenza ARS in una provincia
+
+```bash
+elezioni-sicilia-pp-cli regionali candidati --provincia CT --anno 2022 --json
+```
+
+Candidati ARS raggruppati per lista provinciale, con voti di preferenza per ciascuno.
 
 ## Auth Setup
 

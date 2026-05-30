@@ -229,6 +229,7 @@ See README.md or the bundled SKILL.md for recipes.`,
 	rootCmd.AddCommand(newStoricoCmd(flags))
 	rootCmd.AddCommand(newRiepilogoCmd(flags))
 	rootCmd.AddCommand(newWatchCmd(flags))
+	rootCmd.AddCommand(newRegionaliCmd(flags))
 	rootCmd.AddCommand(newVersionCliCmd())
 
 	return rootCmd
