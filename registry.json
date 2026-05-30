@@ -4870,7 +4870,13 @@
       "creator": {
         "handle": "nolan",
         "name": "Nolan McCafferty"
-      }
+      },
+      "contributors": [
+        {
+          "handle": "tmchow",
+          "name": "Trevin Chow"
+        }
+      ]
     },
     {
       "name": "lemonsqueezy",
