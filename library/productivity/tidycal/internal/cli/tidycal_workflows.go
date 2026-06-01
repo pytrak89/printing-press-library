@@ -99,7 +99,7 @@ func newBriefCmd(flags *rootFlags) *cobra.Command {
 			if err != nil {
 				return usageErr(err)
 			}
-			bookings, err := fetchWorkflowBookings(cmd.Context(), flags, window, opts.includeTeams, false, opts.offline, opts.syncBefore)
+			bookings, err := fetchWorkflowBookings(cmd.Context(), flags, window, opts.includeTeams, false, opts.offline, opts.syncBefore, cmd.ErrOrStderr())
 			if err != nil {
 				return classifyAPIError(err, flags)
 			}
@@ -147,7 +147,7 @@ func newTriageCmd(flags *rootFlags) *cobra.Command {
 			if err != nil {
 				return usageErr(err)
 			}
-			bookings, err := fetchWorkflowBookings(cmd.Context(), flags, window, opts.includeTeams, opts.cancelled, opts.offline, opts.syncBefore)
+			bookings, err := fetchWorkflowBookings(cmd.Context(), flags, window, opts.includeTeams, opts.cancelled, opts.offline, opts.syncBefore, cmd.ErrOrStderr())
 			if err != nil {
 				return classifyAPIError(err, flags)
 			}
@@ -238,7 +238,7 @@ func newFollowupsCmd(flags *rootFlags) *cobra.Command {
 			if err != nil {
 				return usageErr(err)
 			}
-			bookings, err := fetchWorkflowBookings(cmd.Context(), flags, window, opts.includeTeams, !opts.excludeCancelled, opts.offline, opts.syncBefore)
+			bookings, err := fetchWorkflowBookings(cmd.Context(), flags, window, opts.includeTeams, !opts.excludeCancelled, opts.offline, opts.syncBefore, cmd.ErrOrStderr())
 			if err != nil {
 				return classifyAPIError(err, flags)
 			}
@@ -406,7 +406,7 @@ func resolveWorkflowWindow(dateExpr, fromExpr, toExpr string, loc *time.Location
 	}
 	start := dayStart(from, loc)
 	end := dayStart(to, loc)
-	if !strings.HasPrefix(strings.TrimSpace(toExpr), "+") && !strings.HasPrefix(strings.TrimSpace(toExpr), "-") && toExpr != fromExpr {
+	if toExpr != fromExpr {
 		end = end.AddDate(0, 0, 1)
 	}
 	if !end.After(start) {
@@ -444,7 +444,7 @@ func dayStart(t time.Time, loc *time.Location) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
 }
 
-func fetchWorkflowBookings(ctx context.Context, flags *rootFlags, window tidycalWindow, includeTeams, cancelled, offline, syncBefore bool) ([]workflowBooking, error) {
+func fetchWorkflowBookings(ctx context.Context, flags *rootFlags, window tidycalWindow, includeTeams, cancelled, offline, syncBefore bool, hintWriter io.Writer) ([]workflowBooking, error) {
 	c, err := flags.newClient()
 	if err != nil {
 		return nil, err
@@ -465,7 +465,7 @@ func fetchWorkflowBookings(ctx context.Context, flags *rootFlags, window tidycal
 	} else if syncBefore {
 		strategy = "live"
 	}
-	data, _, err := resolvePaginatedReadWithStrategy(ctx, c, flags, strategy, "bookings", "/bookings", params, nil, false, "page", "page", "", "", "", io.Discard)
+	data, _, err := resolvePaginatedReadWithStrategy(ctx, c, flags, strategy, "bookings", "/bookings", params, nil, false, "page", "page", "", "", "", hintWriter)
 	if err != nil {
 		return nil, err
 	}
@@ -580,11 +580,12 @@ func filterBookingsInWindow(bookings []workflowBooking, window tidycalWindow, lo
 			continue
 		}
 		start, ok := parseAPITime(booking.StartsAt)
-		if ok {
-			local := start.In(loc)
-			if local.Before(window.From) || !local.Before(window.To) {
-				continue
-			}
+		if !ok {
+			continue
+		}
+		local := start.In(loc)
+		if local.Before(window.From) || !local.Before(window.To) {
+			continue
 		}
 		filtered = append(filtered, booking)
 	}
@@ -701,7 +702,7 @@ func buildFollowups(bookings []workflowBooking) []followupItem {
 			reason = "paid_booking"
 		}
 		for _, q := range b.Questions {
-			if strings.Contains(strings.ToLower(q.Answer), "follow") {
+			if reason != "cancelled_booking" && strings.Contains(strings.ToLower(q.Answer), "follow") {
 				reason = "intake_answer_mentions_followup"
 			}
 		}

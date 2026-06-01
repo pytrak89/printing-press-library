@@ -12,39 +12,31 @@ import (
 )
 
 func newBookingsListCmd(flags *rootFlags) *cobra.Command {
+	var flagStartsAt string
+	var flagEndsAt string
+	var flagCancelled bool
 	var flagPage string
+	var flagIncludeTeams bool
 	var flagAll bool
 
 	cmd := &cobra.Command{
-		Use:         "list <starts_at> <ends_at> <cancelled> <include_teams>",
+		Use:         "list",
 		Short:       "Get a list of bookings.",
-		Example:     "  tidycal-pp-cli bookings list example-value example-value true true",
+		Example:     "  tidycal-pp-cli bookings list",
 		Annotations: map[string]string{"pp:endpoint": "bookings.list", "pp:method": "GET", "pp:path": "/bookings", "mcp:read-only": "true"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return cmd.Help()
-			}
 			c, err := flags.newClient()
 			if err != nil {
 				return err
 			}
 
 			path := "/bookings"
-			if len(args) < 2 {
-				return usageErr(fmt.Errorf("ends_at is required\nUsage: %s <%s>", cmd.CommandPath(), "ends_at"))
-			}
-			if len(args) < 3 {
-				return usageErr(fmt.Errorf("cancelled is required\nUsage: %s <%s>", cmd.CommandPath(), "cancelled"))
-			}
-			if len(args) < 4 {
-				return usageErr(fmt.Errorf("include_teams is required\nUsage: %s <%s>", cmd.CommandPath(), "include_teams"))
-			}
-			path = replacePathParam(path, "page", fmt.Sprintf("%v", flagPage))
 			data, prov, err := resolvePaginatedReadWithStrategy(cmd.Context(), c, flags, "auto", "bookings", path, map[string]string{
-				"starts_at":     args[0],
-				"ends_at":       args[1],
-				"cancelled":     args[2],
-				"include_teams": args[3],
+				"starts_at":     fmt.Sprintf("%v", flagStartsAt),
+				"ends_at":       fmt.Sprintf("%v", flagEndsAt),
+				"cancelled":     fmt.Sprintf("%v", flagCancelled),
+				"page":          fmt.Sprintf("%v", flagPage),
+				"include_teams": fmt.Sprintf("%v", flagIncludeTeams),
 			}, nil, flagAll, "page", "page", "", "", "", cmd.ErrOrStderr())
 			if err != nil {
 				return classifyAPIError(err, flags)
@@ -93,7 +85,11 @@ func newBookingsListCmd(flags *rootFlags) *cobra.Command {
 			return printOutputWithFlags(cmd.OutOrStdout(), data, flags)
 		},
 	}
+	cmd.Flags().StringVar(&flagStartsAt, "starts-at", "", "Get bookings starting from a specific date.")
+	cmd.Flags().StringVar(&flagEndsAt, "ends-at", "", "Get bookings ending before a specific date.")
+	cmd.Flags().BoolVar(&flagCancelled, "cancelled", false, "Get only cancelled bookings.")
 	cmd.Flags().StringVar(&flagPage, "page", "1", "Page number.")
+	cmd.Flags().BoolVar(&flagIncludeTeams, "include-teams", false, "Include team bookings.")
 	cmd.Flags().BoolVar(&flagAll, "all", false, "Fetch all pages")
 
 	return cmd
