@@ -183,6 +183,42 @@ These capabilities aren't available in any other tool for this API.
   ```bash
   splitwise-pp-cli recurring --agent
   ```
+- **`forecast`** — Project upcoming shared obligations from recurring spending patterns. Finds charges with a regular cadence and reports the next expected date and amount for anything due inside the window (default 35 days) or already overdue.
+  Forecast reads from your synced local store; on large accounts, results can be incomplete until a full sync.
+
+  _Use to budget for next month's shared bills, or catch a regular charge that's overdue and unlogged._
+
+  ```bash
+  splitwise-pp-cli forecast --agent
+  splitwise-pp-cli forecast --days 60 --json
+  ```
+
+### Multi-currency normalization
+- **`normalize`** — Normalize multi-currency net position and spend into one base currency using user-supplied offline FX rates (`--rate` / `--rates-file`); historical/automatic FX lookup is intentionally out of scope.
+
+  _Use to compare or total spend across trips in different currencies — supply the rates and get one base-currency number; a currency with no rate is surfaced as unconverted, never silently dropped._
+
+  ```bash
+  splitwise-pp-cli normalize --base USD --rate EUR=1.08 --agent
+  ```
+
+### Trip & period reports
+- **`report`** — Export an offline trip/period spend report as Markdown, CSV, or JSON. Report output is single-currency: default is the most common filtered currency, other currencies are excluded and counted, and `--currency` pins one explicitly.
+
+  _Use to hand someone a trip summary, or to archive a period's shared spend — totals, per-person paid/owed/net, per-category breakdown, and the expense list, in a format you can paste or commit._
+
+  ```bash
+  splitwise-pp-cli report --group "Tahoe Trip" --format md
+  ```
+
+### Fairness & collection risk
+- **`fairness`** — Score who carries the group, who's a collection risk, and who to chase or write off — offline, from your synced history.
+
+  _Turns "who still owes me, and will I ever see it" into an action list: nudge, chase, or write off (debt that is old **and** gone quiet). `--by contribution` shows who fronts cash vs. free-rides; `--by collectability` ranks by debt age and settle latency. New group members with no history are surfaced separately, never flagged as risks._
+
+  ```bash
+  splitwise-pp-cli fairness --by risk --agent
+  ```
 
 ### Reconcile and settle
 - **`settle-up`** — Compute the minimum set of transfers that zeroes out balances in a group, then optionally record the payments.
@@ -207,9 +243,29 @@ These capabilities aren't available in any other tool for this API.
   splitwise-pp-cli split "Tahoe Trip" --amount 84 --equal --agent
   ```
 - **`net`** — Net balances across all groups into the fewest direct transfers to settle your whole account (plan-only; `--record` planned).
+- **`audit`** — Scan synced expenses offline for likely duplicates (same description, cost, currency, date, and group) and per-category cost outliers (robust modified z-score using median/MAD; two-sided threshold |z| > 3.5, flagging items far above OR below the category median); read-only, `--limit` caps findings per type (default 50).
 
 ## Recipes
 
+### Normalize multi-currency spend — `normalize`
+
+Convert mixed-currency balances/spend into one base currency with deterministic, user-supplied rates.
+
+```bash
+splitwise-pp-cli normalize --base USD --rate EUR=1.08 --rate GBP=1.27
+```
+
+Add `--agent` for JSON output in automation flows. A currency with no `--rate` is listed as unconverted (not mixed into the total); pin rates with repeated `--rate CUR=FACTOR` or a `--rates-file`.
+
+### Export a trip/period report — `report`
+
+Generate a deterministic offline report for a group/trip or date range.
+
+```bash
+splitwise-pp-cli report --group "Tahoe Trip" --format md
+splitwise-pp-cli report --since 2025-01-01 --until 2025-12-31 --format csv > 2025.csv
+splitwise-pp-cli report --agent
+```
 
 ### Settle the whole network in the fewest transfers — `net`
 
@@ -220,6 +276,93 @@ splitwise-pp-cli net
 ```
 
 Nets each friend's balances (cancelling A→B→C→A cycles) into the minimum set of real-world transfers, separated per currency, and reports how many transfers it saved vs. settling each group on its own. Add `--agent` for JSON.
+
+### Catch bad data before you settle — `audit`
+
+**Find likely duplicate expenses and per-category cost outliers:**
+
+```bash
+splitwise-pp-cli audit
+```
+
+Flags repeated near-identical expenses (same description, cost, date, currency, and group) and expenses far from their category baseline (either unusually expensive or unusually cheap) using a robust median/MAD score. Use `--limit N` to cap findings per type, `--agent` for JSON.
+
+### See what's coming — `forecast`
+
+**Project next month's recurring shared obligations:**
+
+```bash
+splitwise-pp-cli forecast
+```
+
+Detects regular charges (rent, utilities, subscriptions) from your synced history and projects the upcoming ones, flagging anything overdue or due soon. Set the window with `--days N` (default 35), add `--agent` for JSON.
+
+### Collect what you're owed — the `fairness` cookbook
+
+`fairness` turns your synced ledger into an action list. Default lens is **risk** (who to chase, worst first).
+
+**Who should I chase, and what should I just write off?**
+
+```bash
+splitwise-pp-cli fairness --by risk
+```
+
+Ranks everyone who owes you by a 0–100 collection-risk score with a per-row action: 🟢 on track · 🟡 nudge · 🟠 chase · 🔴 write-off (old **and** gone quiet). The footer totals at-risk vs. write-off dollars.
+
+**Who carries the group (fronts cash) vs. who free-rides?**
+
+```bash
+splitwise-pp-cli fairness --by contribution
+```
+
+Per person: paid, owed, net, carry-ratio, and a carrier/even/rider role. Informational — Splitwise settles regardless of who pays.
+
+**Who's slow to settle / a live collection risk?**
+
+```bash
+splitwise-pp-cli fairness --by collectability
+```
+
+Sorted by debt age, with average settle latency and days since they last settled; `--by collectability` now also shows a projected settle date (raw `projected_days_out` in JSON).
+
+**Scope to one friend, or one group/trip:**
+
+```bash
+splitwise-pp-cli fairness --friend "Alex"
+splitwise-pp-cli fairness --group "Tahoe Trip"
+```
+
+**Agent mode — the action list as JSON (raw day-counts for your own math):**
+
+```bash
+splitwise-pp-cli fairness --by risk --agent
+```
+
+Human tables print ages as `4y 3mo 8d`; JSON keeps raw `*_days` integers so tools convert themselves.
+
+**Tune the write-off threshold** (default: 365 days old + 180 days silent):
+
+```bash
+splitwise-pp-cli fairness --by risk --write-off-days 730 --ghost-days 90
+```
+
+### Nudge a friend to pay — `fairness nudge`
+
+Splitwise has no send-reminder endpoint, so this command posts a comment on a shared unsettled expense; Splitwise then notifies participants per their own notification settings.
+
+Preview only by default:
+
+```bash
+splitwise-pp-cli fairness nudge "Alex"
+```
+
+Actually post the reminder comment:
+
+```bash
+splitwise-pp-cli fairness nudge "Alex" --send
+```
+
+Optional flags: `--message` to override reminder text, `--expense-id` to force a specific expense, and `--send` to post (otherwise preview only). Reachability caveat: this CLI's synced `Friend` shape does not include email/registration status, so v1 does not pre-gate on confirmed-account status.
 
 ### Net position for an agent
 

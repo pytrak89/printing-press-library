@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,65 @@ import (
 	"github.com/mvanhorn/printing-press-library/library/payments/splitwise/internal/config"
 	"github.com/mvanhorn/printing-press-library/library/payments/splitwise/internal/mcp/cobratree"
 	"github.com/mvanhorn/printing-press-library/library/payments/splitwise/internal/store"
+)
+
+// mcpListMaxBytes is the per-page byte budget for paginated GET list responses.
+// Overridable via PP_MCP_MAX_BYTES for tuning.
+func mcpListMaxBytes() int {
+	if v := os.Getenv("PP_MCP_MAX_BYTES"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 24000
+}
+
+// mcpIntArg reads an integer-valued MCP argument (JSON numbers arrive as float64);
+// returns 0 when absent or not a number.
+func mcpIntArg(args map[string]any, key string) int {
+	if f, ok := args[key].(float64); ok {
+		return int(f)
+	}
+	return 0
+}
+
+// bindingHasName reports whether the tool already declares a query/path binding of
+// this name, so the client-side pager must not also consume it.
+func bindingHasName(bindings []mcpParamBinding, name string) bool {
+	for _, b := range bindings {
+		if b.PublicName == name {
+			return true
+		}
+	}
+	return false
+}
+
+// paginatesNatively reports whether a GET tool already pages server-side, i.e.
+// it declares a native offset or limit query binding (e.g. get_expenses,
+// get_notifications). For those tools the byte-budget client pager is disabled
+// entirely: their response is already paginated by the API, so re-wrapping it in
+// the {total,...,items} envelope would change the schema and report a `total`
+// covering only the server's returned page. For tools that do NOT page natively,
+// offset/limit are purely client-side cursors owned by the pager — consumed
+// locally and never forwarded upstream.
+func paginatesNatively(bindings []mcpParamBinding) bool {
+	return bindingHasName(bindings, "offset") || bindingHasName(bindings, "limit")
+}
+
+// sqlQueryParamDesc documents the real local schema for the sql tool: a single
+// `resources` table keyed by resource_type with the raw record in a JSON `data`
+// column (there are no per-resource tables). Agents that assume table-per-resource
+// hit "no such table"; this points them at resource_type + json_extract instead.
+const sqlQueryParamDesc = "SQL query (SELECT or WITH...SELECT). All synced records live in ONE table: resources(resource_type, id, data, synced_at, updated_at), where data is the raw JSON record. Filter by resource_type (e.g. 'get-groups', 'get-friends', 'get-expenses') and read fields with json_extract(data,'$.field'); expand nested arrays with json_each. Example: SELECT json_extract(data,'$.name') FROM resources WHERE resource_type='get-groups'."
+
+// contextToolDesc / searchToolDesc / sqlToolDesc front-load the "Splitwise" app
+// name so a deferred-tool host (e.g. Claude Cowork) that searches the tool surface
+// by app name surfaces these entry-point tools instead of concluding no connector
+// is installed.
+const (
+	contextToolDesc = "Splitwise: API domain context — resource taxonomy, auth requirements, query tips, and unique capabilities. Call this first when working with Splitwise."
+	searchToolDesc  = "Splitwise: full-text search across all synced Splitwise data. Faster than paginating list endpoints. Requires sync first."
+	sqlToolDesc     = "Splitwise: read-only SQL against the local Splitwise database. Use for ad-hoc analysis, aggregations, and joins across synced resources. Requires sync first."
 )
 
 // RegisterTools registers all API operations as MCP tools.
@@ -121,6 +181,8 @@ func RegisterTools(s *server.MCPServer) {
 	)
 	s.AddTool(
 		mcplib.NewTool("get-categories_list",
+			mcplib.WithNumber("offset", mcplib.Description("Pagination cursor: index of the first item to return (use the next_offset from a prior page). Default 0.")),
+			mcplib.WithNumber("limit", mcplib.Description("Max items to return in this page (the byte budget may return fewer). Default: as many as fit.")),
 			mcplib.WithDescription("Returns a list of all categories Splitwise allows for expenses. There are parent categories that represent groups of categories with subcategories for more specific categorization. When creating expenses, you must use a subcategory, not a parent category. If you intend for an expense to be represented by the parent category and nothing more specific, please use the 'Other' subcategory. (public)"),
 			mcplib.WithReadOnlyHintAnnotation(true),
 			mcplib.WithDestructiveHintAnnotation(false),
@@ -130,6 +192,8 @@ func RegisterTools(s *server.MCPServer) {
 	)
 	s.AddTool(
 		mcplib.NewTool("get-comments_list",
+			mcplib.WithNumber("offset", mcplib.Description("Pagination cursor: index of the first item to return (use the next_offset from a prior page). Default 0.")),
+			mcplib.WithNumber("limit", mcplib.Description("Max items to return in this page (the byte budget may return fewer). Default: as many as fit.")),
 			mcplib.WithDescription("Get expense comments. Required: expense_id. Returns the GetCommentsListResponse."),
 			mcplib.WithNumber("expense_id", mcplib.Required(), mcplib.Description("Expense id")),
 			mcplib.WithReadOnlyHintAnnotation(true),
@@ -140,6 +204,8 @@ func RegisterTools(s *server.MCPServer) {
 	)
 	s.AddTool(
 		mcplib.NewTool("get-currencies_list",
+			mcplib.WithNumber("offset", mcplib.Description("Pagination cursor: index of the first item to return (use the next_offset from a prior page). Default 0.")),
+			mcplib.WithNumber("limit", mcplib.Description("Max items to return in this page (the byte budget may return fewer). Default: as many as fit.")),
 			mcplib.WithDescription("Returns a list of all currencies allowed by the system. These are mostly ISO 4217 codes, but we do sometimes use pending codes or unofficial, colloquial codes (like BTC instead of XBT for Bitcoin). (public)"),
 			mcplib.WithReadOnlyHintAnnotation(true),
 			mcplib.WithDestructiveHintAnnotation(false),
@@ -195,6 +261,8 @@ func RegisterTools(s *server.MCPServer) {
 	)
 	s.AddTool(
 		mcplib.NewTool("get-friends_list",
+			mcplib.WithNumber("offset", mcplib.Description("Pagination cursor: index of the first item to return (use the next_offset from a prior page). Default 0.")),
+			mcplib.WithNumber("limit", mcplib.Description("Max items to return in this page (the byte budget may return fewer). Default: as many as fit.")),
 			mcplib.WithDescription("**Note**: `group` objects only include group balances with that friend. Returns the GetFriendsListResponse."),
 			mcplib.WithReadOnlyHintAnnotation(true),
 			mcplib.WithDestructiveHintAnnotation(false),
@@ -214,6 +282,8 @@ func RegisterTools(s *server.MCPServer) {
 	)
 	s.AddTool(
 		mcplib.NewTool("get-groups_list",
+			mcplib.WithNumber("offset", mcplib.Description("Pagination cursor: index of the first item to return (use the next_offset from a prior page). Default 0.")),
+			mcplib.WithNumber("limit", mcplib.Description("Max items to return in this page (the byte budget may return fewer). Default: as many as fit.")),
 			mcplib.WithDescription("**Note**: Expenses that are not associated with a group are listed in a group with ID 0. Returns the GetGroupsListResponse."),
 			mcplib.WithReadOnlyHintAnnotation(true),
 			mcplib.WithDestructiveHintAnnotation(false),
@@ -313,7 +383,7 @@ func RegisterTools(s *server.MCPServer) {
 	// Search tool — faster than iterating list endpoints for finding specific items
 	s.AddTool(
 		mcplib.NewTool("search",
-			mcplib.WithDescription("Full-text search across all synced data. Faster than paginating list endpoints. Requires sync first."),
+			mcplib.WithDescription(searchToolDesc),
 			mcplib.WithString("query", mcplib.Required(), mcplib.Description("Search query (supports FTS5 syntax: AND, OR, NOT, quotes for phrases)")),
 			mcplib.WithNumber("limit", mcplib.Description("Max results (default 25)")),
 			mcplib.WithReadOnlyHintAnnotation(true),
@@ -324,8 +394,8 @@ func RegisterTools(s *server.MCPServer) {
 	// SQL tool — ad-hoc analysis on synced data without API calls
 	s.AddTool(
 		mcplib.NewTool("sql",
-			mcplib.WithDescription("Run read-only SQL against local database. Use for ad-hoc analysis, aggregations, and joins across synced resources. Requires sync first."),
-			mcplib.WithString("query", mcplib.Required(), mcplib.Description("SQL query (SELECT or WITH...SELECT). Tables match resource names.")),
+			mcplib.WithDescription(sqlToolDesc),
+			mcplib.WithString("query", mcplib.Required(), mcplib.Description(sqlQueryParamDesc)),
 			mcplib.WithReadOnlyHintAnnotation(true),
 			mcplib.WithDestructiveHintAnnotation(false),
 		),
@@ -336,7 +406,7 @@ func RegisterTools(s *server.MCPServer) {
 	// Call this first to understand the API taxonomy, query patterns, and capabilities.
 	s.AddTool(
 		mcplib.NewTool("context",
-			mcplib.WithDescription("Get API domain context: resource taxonomy, auth requirements, query tips, and unique capabilities. Call this first."),
+			mcplib.WithDescription(contextToolDesc),
 			mcplib.WithReadOnlyHintAnnotation(true),
 			mcplib.WithDestructiveHintAnnotation(false),
 		),
@@ -352,6 +422,19 @@ type mcpParamBinding struct {
 	PublicName string
 	WireName   string
 	Location   string
+}
+
+// formatMCPParamValue stringifies an MCP argument for a path or query parameter.
+// JSON numbers arrive as float64, and fmt's %v renders a large integer-valued
+// float in scientific notation (e.g. id 1925035 -> "1.925035e+06"), which
+// corrupts numeric path params like /get_friend/{id} and numeric query filters.
+// FormatFloat with 'f' and precision -1 emits the minimal decimal form
+// ("1925035", "28.48") with no exponent; non-numeric values fall back to %v.
+func formatMCPParamValue(v any) string {
+	if f, ok := v.(float64); ok {
+		return strconv.FormatFloat(f, 'f', -1, 64)
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 // makeAPIHandler creates a generic MCP tool handler for an API endpoint.
@@ -402,7 +485,7 @@ func makeAPIHandler(method, pathTemplate string, readOnly bool, binaryResponse b
 			case "path":
 				placeholder := "{" + binding.WireName + "}"
 				pathParams[binding.PublicName] = true
-				path = strings.Replace(path, placeholder, fmt.Sprintf("%v", v), 1)
+				path = strings.Replace(path, placeholder, formatMCPParamValue(v), 1)
 			case "body":
 				bodyArgs[binding.WireName] = v
 			case "body_json":
@@ -417,8 +500,20 @@ func makeAPIHandler(method, pathTemplate string, readOnly bool, binaryResponse b
 					bodyJSONOverride = json.RawMessage(s)
 				}
 			default:
-				params[binding.WireName] = fmt.Sprintf("%v", v)
+				params[binding.WireName] = formatMCPParamValue(v)
 			}
+		}
+		// Mark the client-side pagination cursor (offset/limit) as consumed so
+		// the generic args-forwarding loop below does not append it to the
+		// upstream query string. This applies only to GET tools that do NOT page
+		// natively — for those, the client pager (below) owns offset/limit, so
+		// neither must reach the API (a leaked client-cursor offset makes the API
+		// return a partial slice, which PaginateBody then mis-totals). Tools that
+		// page natively keep offset/limit as real query bindings, so they are
+		// left in knownArgs via the bindings loop and forwarded normally.
+		if method == "GET" && !paginatesNatively(bindings) {
+			knownArgs["offset"] = true
+			knownArgs["limit"] = true
 		}
 		for _, p := range positionalParams {
 			placeholder := "{" + p + "}"
@@ -427,7 +522,7 @@ func makeAPIHandler(method, pathTemplate string, readOnly bool, binaryResponse b
 			}
 			pathParams[p] = true
 			if v, ok := args[p]; ok {
-				path = strings.Replace(path, placeholder, fmt.Sprintf("%v", v), 1)
+				path = strings.Replace(path, placeholder, formatMCPParamValue(v), 1)
 			}
 		}
 
@@ -439,7 +534,7 @@ func makeAPIHandler(method, pathTemplate string, readOnly bool, binaryResponse b
 			case "POST", "PUT", "PATCH":
 				bodyArgs[k] = v
 			default:
-				params[k] = fmt.Sprintf("%v", v)
+				params[k] = formatMCPParamValue(v)
 			}
 		}
 
@@ -551,19 +646,20 @@ func makeAPIHandler(method, pathTemplate string, readOnly bool, binaryResponse b
 			}
 		}
 
-		// For GET responses, wrap bare arrays with count metadata
-		if method == "GET" {
-			trimmed := strings.TrimSpace(string(data))
-			if len(trimmed) > 0 && trimmed[0] == '[' {
-				var items []json.RawMessage
-				if json.Unmarshal(data, &items) == nil {
-					wrapped := map[string]any{
-						"count": len(items),
-						"items": items,
-					}
-					out, _ := json.Marshal(wrapped)
-					return mcplib.NewToolResultText(string(out)), nil
-				}
+		// For GET list responses on tools WITHOUT native server-side paging,
+		// byte-budget-paginate by default so a large collection never blows the
+		// host token budget. Endpoints that already page server-side
+		// (get_expenses, get_notifications declare native offset/limit query
+		// bindings) are left untouched: re-wrapping their already-paginated
+		// response in the {total,...,items} envelope would both change their
+		// schema and report a `total` that reflects only the server's returned
+		// page rather than the full collection. paginatesNatively gates the
+		// whole pager off for those tools.
+		if method == "GET" && !paginatesNatively(bindings) {
+			clientOffset := mcpIntArg(args, "offset")
+			clientLimit := mcpIntArg(args, "limit")
+			if out, ok := cli.PaginateBody(data, clientOffset, clientLimit, mcpListMaxBytes(), ""); ok {
+				return mcplib.NewToolResultText(string(out)), nil
 			}
 		}
 		if binaryResponse {
