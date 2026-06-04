@@ -257,9 +257,6 @@ func capBidChange(current, proposed float64, opts WeeklyReviewOptions) float64 {
 }
 
 func capBudgetChange(current, proposed float64, opts WeeklyReviewOptions) float64 {
-	if opts.MaxDailyBudget > 0 && proposed > opts.MaxDailyBudget {
-		proposed = opts.MaxDailyBudget
-	}
 	if opts.MaxBudgetChangePercent > 0 {
 		maxDelta := current * (opts.MaxBudgetChangePercent / 100)
 		if proposed > current+maxDelta {
@@ -271,6 +268,9 @@ func capBudgetChange(current, proposed float64, opts WeeklyReviewOptions) float6
 	}
 	if proposed < 1 {
 		proposed = 1
+	}
+	if opts.MaxDailyBudget > 0 && proposed > opts.MaxDailyBudget {
+		proposed = opts.MaxDailyBudget
 	}
 	return proposed
 }

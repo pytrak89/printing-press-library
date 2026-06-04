@@ -61,3 +61,11 @@ func TestCapBudgetChangeAppliesMinimumDailyBudget(t *testing.T) {
 		t.Fatalf("capBudgetChange floor = %.2f, want 1.00", got)
 	}
 }
+
+func TestCapBudgetChangeHonorsMaxDailyBudgetAfterPercentFloor(t *testing.T) {
+	t.Parallel()
+	got := capBudgetChange(100, 150, WeeklyReviewOptions{MaxDailyBudget: 80, MaxBudgetChangePercent: 10})
+	if got != 80 {
+		t.Fatalf("capBudgetChange conflicting max daily/percent cap = %.2f, want 80.00", got)
+	}
+}
