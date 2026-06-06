@@ -49,14 +49,23 @@ can consume directly.`,
 			defer cancel()
 			http := mustHTTP()
 			visited := map[string]bool{}
-			tree, err := walkChain(ctx, http, rootECLI, flagDepth, flagDirection, visited)
-			if err != nil {
-				return err
-			}
+			tree, walkErr := walkChain(ctx, http, rootECLI, flagDepth, flagDirection, visited)
+			// Emit the partial tree on cancellation so the user sees how
+			// far the walk got, THEN surface the typed error so agents
+			// and scripts see a non-zero exit. Bailing on walkErr before
+			// printing the tree would hide the partial result the user
+			// usually wants.
 			if shouldEmitJSON(cmd.OutOrStdout(), flags) {
-				return writeJSONOut(cmd.OutOrStdout(), tree)
+				if outErr := writeJSONOut(cmd.OutOrStdout(), tree); outErr != nil {
+					return outErr
+				}
+			} else {
+				printChainTree(cmd.OutOrStdout(), tree, 0)
 			}
-			printChainTree(cmd.OutOrStdout(), tree, 0)
+			if walkErr != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "chain: walk interrupted (%v); partial tree emitted above.\n", walkErr)
+				return walkErr
+			}
 			return nil
 		},
 	}
@@ -95,9 +104,24 @@ func walkChain(ctx context.Context, http *rechtspraak.HTTP, ecli string, depth i
 	if depth < 0 {
 		return node, nil
 	}
+	// Honour context cancellation before each potentially expensive HTTP
+	// call. Without this the walk silently records every error in
+	// node.Error and returns nil at the top — RunE then exits 0 even when
+	// the deadline fired mid-walk. An agent passing --timeout 5s would
+	// never detect the truncated output.
+	if err := ctx.Err(); err != nil {
+		node.Error = err.Error()
+		return node, err
+	}
 	d, err := http.Get(ctx, ecli, false)
 	if err != nil {
 		node.Error = err.Error()
+		// Distinguish context errors (propagate so the outer RunE exits
+		// non-zero) from transient per-ECLI fetch failures (which stay
+		// embedded in the leaf node's Error field and the walk continues).
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return node, ctxErr
+		}
 		return node, nil
 	}
 	node.Court = d.Court
@@ -122,11 +146,19 @@ func walkChain(ctx context.Context, http *rechtspraak.HTTP, ecli string, depth i
 		}
 		if rel.Target == "" {
 			edge.Target = &ChainNode{Court: "(no target)"}
-		} else {
-			child, _ := walkChain(ctx, http, rel.Target, depth-1, direction, visited)
-			edge.Target = child
+			node.Edges = append(node.Edges, edge)
+			continue
 		}
+		child, childErr := walkChain(ctx, http, rel.Target, depth-1, direction, visited)
+		edge.Target = child
 		node.Edges = append(node.Edges, edge)
+		// Propagate context errors up the recursion so the partial tree
+		// reaches the caller AND the RunE returns non-zero. Non-ctx
+		// fetch errors stay in child.Error and the walk continues across
+		// sibling edges.
+		if childErr != nil && ctx.Err() != nil {
+			return node, ctx.Err()
+		}
 	}
 	return node, nil
 }
