@@ -2,7 +2,7 @@
 
 **The only X CLI with an offline, searchable local mirror — full-text search and analytics over your archived posts without re-spending per-read API credits — plus a full-surface MCP server and honest tier/reachability diagnostics.**
 
-Mirrors the official X v2 API and adds what no other X tool has: a local SQLite store you can sync once and query many times with FTS5 search and group-by analytics, agent-native --json/--select output, and an MCP server that exposes the whole surface to AI agents through token-efficient orchestration plus named multi-step intents. Start pasted-link workflows with `post resolve`, use `thread context` when a post needs parent/quote/reply context, save durable source material with `collection save/list/export`, reconstruct synced conversation threads offline with `thread show`, compose self-reply threads from markdown with `thread compose`, author long-form X Articles from markdown with `articles-publish-md`, and rescue your bookmark graveyard with `users bookmarks find` — keyword and author search over your synced bookmarks, which X itself gives you no way to search.
+Mirrors the official X v2 API and adds what no other X tool has: a local SQLite store you can sync once and query many times with FTS5 search and group-by analytics, agent-native --json/--select output, and an MCP server that exposes the whole surface to AI agents through token-efficient orchestration plus named multi-step intents. Start pasted-link workflows with `post resolve`, use `thread context` when a post needs parent/quote/reply context, save durable source material with `collection save/list/export`, track ongoing searches with `monitor create/run/list`, package saved activity with `brief`, snapshot accounts with `account snapshot`, find launch or repo links with `url mentions`, track post metrics with `performance snapshot/backfill/analyze`, export account/query timelines with `timeline export`, reconstruct synced conversation threads offline with `thread show`, compose self-reply threads from markdown with `thread compose`, author long-form X Articles from markdown with `articles-publish-md`, and rescue your bookmark graveyard with `users bookmarks find` — keyword and author search over your synced bookmarks, which X itself gives you no way to search.
 
 Learn more at [X (Twitter)](https://developer.x.com/).
 
@@ -149,6 +149,13 @@ x-twitter-pp-cli post resolve https://x.com/user/status/123 --agent
 x-twitter-pp-cli collection save https://x.com/user/status/123 --collection research --note "Useful example" --agent
 x-twitter-pp-cli collection export research --format markdown
 
+# Track ongoing mentions with a local watermark and dedupe.
+x-twitter-pp-cli monitor create launch --url https://example.com --agent
+x-twitter-pp-cli monitor run launch --since last --agent
+
+# Package saved activity without LLM-dependent claims.
+x-twitter-pp-cli brief --monitor launch --since 24h --format markdown
+
 ```
 
 ## Unique Features
@@ -180,6 +187,47 @@ These capabilities aren't available in any other tool for this API.
   x-twitter-pp-cli collection save https://x.com/user/status/123 --collection ai-agents --note "Good framing" --agent
   x-twitter-pp-cli collection list ai-agents --agent
   x-twitter-pp-cli collection export ai-agents --format markdown
+  ```
+- **`monitor create/run/list`** — Create named query, URL, or account monitors, then run them repeatedly with local watermarks and dedupe. `monitor create` and `monitor run` write only local SQLite state; they never post, like, reply, follow, or mutate X.
+
+  _Use monitors for launch mentions, product/customer feedback, account tracking, and recurring agent jobs. `--since last` uses the saved watermark; `--preview` fetches without updating local state._
+
+  ```bash
+  x-twitter-pp-cli monitor create ai-labs --query 'from:openai OR from:anthropic' --agent
+  x-twitter-pp-cli monitor create product-mentions --url https://example.com --agent
+  x-twitter-pp-cli monitor run ai-labs --since last --agent
+  x-twitter-pp-cli monitor list --agent
+  ```
+- **`brief`** — Build a deterministic source-backed JSON or markdown brief from monitor results, collections, or explicit post IDs. It packages links, authors, text, and available metrics; it does not invent conclusions or run LLM summarization.
+
+  ```bash
+  x-twitter-pp-cli brief --monitor ai-labs --since 24h --agent
+  x-twitter-pp-cli brief --collection launch-feedback --format markdown
+  ```
+- **`account snapshot`** — Capture profile basics, public metrics, pinned post, and recent posts for a username or user ID. It is read-only toward X and uses local data first unless `--live` or `--data-source live` is set.
+
+  ```bash
+  x-twitter-pp-cli account snapshot @username --recent 20 --agent
+  x-twitter-pp-cli account snapshot 12345 --include recent,profile,metrics,pinned --format markdown
+  ```
+- **`url mentions`** — Search for recent posts mentioning a URL, domain, repo, article, or product page. It can optionally save results into a local collection or create/update a local monitor for future runs.
+
+  ```bash
+  x-twitter-pp-cli url mentions https://example.com --since 7d --agent
+  x-twitter-pp-cli url mentions github.com/org/repo --collection launch-feedback --monitor repo-links --agent
+  ```
+- **`performance snapshot/backfill/analyze`** — Store timestamped post metrics locally, backfill recent account posts when auth allows, and analyze saved snapshots by type, hour, media, link presence, or label. Missing metrics stay nullable/absent; the CLI does not treat unavailable fields as zero.
+
+  ```bash
+  x-twitter-pp-cli performance snapshot --ids 123,456 --label 24h --agent
+  x-twitter-pp-cli performance backfill --mine --days 90 --agent
+  x-twitter-pp-cli performance analyze --since 90d --group-by type,hour,has_media,has_link --agent
+  ```
+- **`timeline export`** — Export an account or query timeline as markdown, JSON, or JSONL. Account exports use local synced tweets when available and fetch live only when needed or requested.
+
+  ```bash
+  x-twitter-pp-cli timeline export @username --since 30d --format markdown
+  x-twitter-pp-cli timeline export --query 'ai agents' --since 7d --format jsonl
   ```
 - **`thread show`** — Rebuild a full conversation thread from your locally synced posts — ordered and depth-tagged — without re-spending API read credits.
 

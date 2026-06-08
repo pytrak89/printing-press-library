@@ -152,6 +152,12 @@ Highlights (not in the official API docs):
   • post resolve   Normalize any X post URL or raw post ID into a canonical structured record with provenance, author context, and suggested next workflow commands.
   • thread context   Resolve a post URL or ID, then include parent, quote, and optionally bounded reply context from local/live sources.
   • collection save/list/export   Save resolved posts into durable local collections and export source material as markdown, JSON, JSONL, or CSV.
+  • monitor create/run/list   Track queries, URLs, or accounts with local watermarks, dedupe, and reusable saved results.
+  • brief   Package monitor results, collections, or explicit posts into deterministic source-backed JSON or markdown briefs.
+  • account snapshot   Capture profile basics, public metrics, pinned post, and recent posts for a username or user ID.
+  • url mentions   Find posts mentioning a URL, domain, repo, article, or product page, with optional local collection/monitor saves.
+  • performance snapshot/backfill/analyze   Store timestamped post metrics locally and analyze saved snapshots by type, hour, media, links, or label.
+  • timeline export   Export account or query timelines as markdown, JSON, or JSONL for research and archives.
   • thread show   Rebuild a full conversation thread from your locally synced posts — ordered and depth-tagged — without re-spending API read credits.
   • thread compose   Split a markdown file into a numbered, 280-char-packed self-reply thread; prints by default and only posts with --post.
   • articles-publish-md   Parse a markdown file with YAML frontmatter into the Draft.js content_state JSON X's Articles editor accepts; previews by default; --draft saves a draft, --post publishes publicly.
@@ -276,6 +282,12 @@ See README.md or the bundled SKILL.md for recipes.`,
 	rootCmd.AddCommand(newNovelPostCmd(flags))
 	rootCmd.AddCommand(newNovelCollectionCmd(flags))
 	rootCmd.AddCommand(newNovelThreadCmd(flags))
+	rootCmd.AddCommand(newNovelMonitorCmd(flags))
+	rootCmd.AddCommand(newNovelBriefCmd(flags))
+	rootCmd.AddCommand(newNovelAccountCmd(flags))
+	rootCmd.AddCommand(newNovelURLCmd(flags))
+	rootCmd.AddCommand(newNovelPerformanceCmd(flags))
+	rootCmd.AddCommand(newNovelTimelineCmd(flags))
 	// Novel: attach `bookmarks find` to the generated `users bookmarks` parent.
 	// Walking the built tree keeps the generated parent file untouched, so a
 	// reprint regenerates the endpoint mirrors and re-applies this line cleanly.
