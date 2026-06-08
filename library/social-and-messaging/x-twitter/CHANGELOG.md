@@ -2,6 +2,10 @@
 
 This file is maintained by printing-press-library release automation. Do not hand-edit release sections in normal PRs.
 
+## 2026.6.4 - 2026-06-08
+
+- fix(x-twitter): clarify bearer token auth (#1114).
+
 ## 2026.6.3 - 2026-06-08
 
 - feat(x-twitter): add raw API escape hatch (#1104).

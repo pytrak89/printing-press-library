@@ -2,17 +2,17 @@
   "schema_version": 1,
   "slug": "x-twitter",
   "cli_name": "x-twitter-pp-cli",
-  "version": "2026.6.3",
-  "released_at": "2026-06-08T17:46:02Z",
-  "source_commit": "ab4bd6fff851f1aeff8cef15d6b36a32d1511bfd",
+  "version": "2026.6.4",
+  "released_at": "2026-06-08T23:54:26Z",
+  "source_commit": "b8f294951efca1cc5b973fe7bc88e435d431814f",
   "printing_press_version": "4.20.1",
   "run_id": "20260603-230951",
   "changes": [
     {
-      "title": "feat(x-twitter): add raw API escape hatch",
-      "pr": 1104,
-      "url": "https://github.com/mvanhorn/printing-press-library/pull/1104",
-      "commit": "ab4bd6fff851f1aeff8cef15d6b36a32d1511bfd"
+      "title": "fix(x-twitter): clarify bearer token auth",
+      "pr": 1114,
+      "url": "https://github.com/mvanhorn/printing-press-library/pull/1114",
+      "commit": "b8f294951efca1cc5b973fe7bc88e435d431814f"
     }
   ]
 }
