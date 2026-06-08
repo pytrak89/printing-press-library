@@ -1,6 +1,6 @@
 ---
 name: pp-x-twitter
-description: "The only X CLI with an offline Trigger phrases: `search X for`, `archive tweets about`, `show me the X thread for`, `monitor my X mentions`, `post a thread to X`, `use x-twitter`, `run x-twitter-pp-cli`."
+description: "Offline-searchable X/Twitter CLI and MCP surface for archiving posts, resolving links, monitoring mentions, composing threads, publishing Articles, and searching synced bookmarks. Trigger phrases: `search X for`, `archive tweets about`, `show me the X thread for`, `monitor my X mentions`, `post a thread to X`, `use x-twitter`, `run x-twitter-pp-cli`."
 author: "Cathryn Lavery"
 license: "Apache-2.0"
 argument-hint: "<command> [args] | install cli|mcp"
@@ -232,9 +232,6 @@ These capabilities aren't available in any other tool for this API.
 - `x-twitter-pp-cli insights get-historical` — Retrieves historical engagement metrics for specified Posts within a defined time range.
 - `x-twitter-pp-cli insights get-insights28-hr` — Retrieves engagement metrics for specified Posts over the last 28 hours.
 
-**likes** — Manage likes
-
-
 **lists** — Endpoints related to retrieving, managing Lists
 
 - `x-twitter-pp-cli lists create` — Creates a new List for the authenticated user.
@@ -315,6 +312,9 @@ These capabilities aren't available in any other tool for this API.
 - `x-twitter-pp-cli users get-public-keys` — Returns the public keys and Juicebox configuration for the specified users.
 - `x-twitter-pp-cli users get-reposts-of-me` — Retrieves a list of Posts that repost content from the authenticated user.
 - `x-twitter-pp-cli users get-trends-personalized-trends` — Retrieves personalized trending topics for the authenticated user.
+- `x-twitter-pp-cli users bookmarks find [query]` — Searches locally synced bookmarks by keyword and/or author without another API read.
+- `x-twitter-pp-cli users likes post <user_id> --tweet-id <tweet_id>` — Likes a post on behalf of the authenticated user.
+- `x-twitter-pp-cli users likes unlike-post <user_id> <tweet_id>` — Unlikes a post on behalf of the authenticated user.
 - `x-twitter-pp-cli users search` — Retrieves a list of Users matching a search query.
 
 **webhooks** — Manage webhooks
@@ -381,9 +381,10 @@ X auth has three separate lanes. Do not infer one lane from another; run `x-twit
 Setup sequence:
 
 1. Attach the app to a Project in the X developer console.
-2. Copy the app Bearer Token into `X_BEARER_TOKEN` for app-only public reads.
-3. Enable OAuth2 with suitable scopes, complete the authorization-code + PKCE flow, and set the resulting user-context token in `X_OAUTH2_USER_TOKEN`.
-4. Separately run `x-twitter-pp-cli auth login --chrome` only when using `articles ...` commands.
+2. Set app permissions to Read and write when you need posting or other mutations.
+3. Copy the app Bearer Token into `X_BEARER_TOKEN` for app-only public reads.
+4. Enable OAuth2 with suitable scopes such as `tweet.read`, `tweet.write`, `users.read`, `offline.access`, and `bookmark.read` (required if you intend to sync or search bookmarks), complete the authorization-code + PKCE flow, and set the resulting user-context token in `X_OAUTH2_USER_TOKEN`.
+5. Separately run `x-twitter-pp-cli auth login --chrome` only when using `articles ...` commands.
 
 When X returns `Unsupported Authentication` with `Application-Only is forbidden`, the command requires OAuth2 user-context auth. Fix `auth_lanes.oauth2_user_context`; cookie auth and app-only bearer auth will not satisfy that endpoint.
 
