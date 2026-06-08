@@ -96,17 +96,14 @@ func newNovelCollectionSaveCmd(flags *rootFlags) *cobra.Command {
 			}
 
 			result := collectionSaveResult{Collection: name}
-			for _, rec := range records {
-				added, item, err := saveCollectionItem(cmd, db, name, rec, note, tags)
+			if len(records) > 0 {
+				added, duplicates, items, err := saveCollectionItems(cmd, db, name, records, note, tags)
 				if err != nil {
 					return err
 				}
-				if added {
-					result.Added++
-				} else {
-					result.SkippedDuplicates++
-				}
-				result.Items = append(result.Items, item)
+				result.Added = added
+				result.SkippedDuplicates = duplicates
+				result.Items = items
 			}
 			if wantsHumanTable(cmd.OutOrStdout(), flags) {
 				return flags.printTable(cmd, []string{"COLLECTION", "ADDED", "DUPLICATES"}, [][]string{{
@@ -255,19 +252,15 @@ func openCollectionDB(cmd *cobra.Command, dbPath string) (*store.Store, error) {
 	return db, nil
 }
 
-func saveCollectionItem(cmd *cobra.Command, db *store.Store, collection string, rec *resolvedPostRecord, note string, tags []string) (bool, collectionItemSnapshot, error) {
+func saveCollectionItems(cmd *cobra.Command, db *store.Store, collection string, records []*resolvedPostRecord, note string, tags []string) (int, int, []collectionItemSnapshot, error) {
 	now := generatedAt()
-	raw, err := json.Marshal(rec)
-	if err != nil {
-		return false, collectionItemSnapshot{}, err
-	}
 	tagsRaw, err := json.Marshal(tags)
 	if err != nil {
-		return false, collectionItemSnapshot{}, err
+		return 0, 0, nil, err
 	}
 	tx, err := db.DB().BeginTx(cmd.Context(), nil)
 	if err != nil {
-		return false, collectionItemSnapshot{}, err
+		return 0, 0, nil, err
 	}
 	defer tx.Rollback()
 	if _, err := tx.ExecContext(cmd.Context(),
@@ -275,31 +268,54 @@ func saveCollectionItem(cmd *cobra.Command, db *store.Store, collection string, 
 		 VALUES(?, ?, ?)
 		 ON CONFLICT(name) DO UPDATE SET updated_at = excluded.updated_at`,
 		collection, now, now); err != nil {
-		return false, collectionItemSnapshot{}, err
+		return 0, 0, nil, err
 	}
-	result, err := tx.ExecContext(cmd.Context(),
+	stmt, err := tx.PrepareContext(cmd.Context(),
 		`INSERT INTO post_collection_items(collection_name, tweet_id, tweet_json, note, tags_json, source_url, saved_at)
 		 VALUES(?, ?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(collection_name, tweet_id) DO NOTHING`,
-		collection, rec.TweetID, string(raw), note, string(tagsRaw), rec.URL, now)
+		 ON CONFLICT(collection_name, tweet_id) DO NOTHING`)
 	if err != nil {
-		return false, collectionItemSnapshot{}, err
+		return 0, 0, nil, err
+	}
+	defer stmt.Close()
+
+	added := 0
+	duplicates := 0
+	items := make([]collectionItemSnapshot, 0, len(records))
+	for _, rec := range records {
+		if rec == nil {
+			continue
+		}
+		raw, err := json.Marshal(rec)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		result, err := stmt.ExecContext(cmd.Context(), collection, rec.TweetID, string(raw), note, string(tagsRaw), rec.URL, now)
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		rows, _ := result.RowsAffected()
+		if rows > 0 {
+			added++
+		} else {
+			duplicates++
+		}
+		items = append(items, collectionItemSnapshot{
+			TweetID:  rec.TweetID,
+			URL:      rec.URL,
+			Author:   rec.Author,
+			Text:     rec.Text,
+			Note:     note,
+			Tags:     tags,
+			SavedAt:  now,
+			Source:   rec.Source,
+			Snapshot: rec,
+		})
 	}
 	if err := tx.Commit(); err != nil {
-		return false, collectionItemSnapshot{}, err
+		return 0, 0, nil, err
 	}
-	rows, _ := result.RowsAffected()
-	return rows > 0, collectionItemSnapshot{
-		TweetID:  rec.TweetID,
-		URL:      rec.URL,
-		Author:   rec.Author,
-		Text:     rec.Text,
-		Note:     note,
-		Tags:     tags,
-		SavedAt:  now,
-		Source:   rec.Source,
-		Snapshot: rec,
-	}, nil
+	return added, duplicates, items, nil
 }
 
 func listCollections(cmd *cobra.Command, db *store.Store) ([]map[string]any, error) {
@@ -460,22 +476,36 @@ func normalizeSearchTweetRecord(raw json.RawMessage, userByID map[string]*postAu
 func writeCollectionExport(w io.Writer, collection string, items []collectionItemSnapshot, format string) error {
 	switch strings.ToLower(format) {
 	case "markdown", "md":
-		fmt.Fprintf(w, "# %s\n\n", collection)
+		if err := workflowFprintf(w, "# %s\n\n", collection); err != nil {
+			return err
+		}
 		for _, item := range items {
-			fmt.Fprintf(w, "## %s\n\n", item.URL)
+			if err := workflowFprintf(w, "## %s\n\n", item.URL); err != nil {
+				return err
+			}
 			if item.Author != nil {
-				fmt.Fprintf(w, "- Author: %s\n", authorDisplay(item.Author))
+				if err := workflowFprintf(w, "- Author: %s\n", authorDisplay(item.Author)); err != nil {
+					return err
+				}
 			}
 			if item.SavedAt != "" {
-				fmt.Fprintf(w, "- Saved: %s\n", item.SavedAt)
+				if err := workflowFprintf(w, "- Saved: %s\n", item.SavedAt); err != nil {
+					return err
+				}
 			}
 			if item.Note != "" {
-				fmt.Fprintf(w, "- Note: %s\n", item.Note)
+				if err := workflowFprintf(w, "- Note: %s\n", item.Note); err != nil {
+					return err
+				}
 			}
 			if len(item.Tags) > 0 {
-				fmt.Fprintf(w, "- Tags: %s\n", strings.Join(item.Tags, ", "))
+				if err := workflowFprintf(w, "- Tags: %s\n", strings.Join(item.Tags, ", ")); err != nil {
+					return err
+				}
 			}
-			fmt.Fprintf(w, "\n%s\n\n", item.Text)
+			if err := workflowFprintf(w, "\n%s\n\n", item.Text); err != nil {
+				return err
+			}
 		}
 		return nil
 	case "json":

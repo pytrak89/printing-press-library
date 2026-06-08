@@ -67,6 +67,36 @@
       "description": "Save resolved X posts into local named collections, list saved source material, and export it as markdown, JSON, JSONL, or CSV."
     },
     {
+      "name": "Watermarked X monitors",
+      "command": "monitor create/run/list",
+      "description": "Create named query, URL, or account monitors, run them with local watermarks and dedupe, and reuse saved results for later briefing."
+    },
+    {
+      "name": "Source-backed X briefs",
+      "command": "brief",
+      "description": "Package monitor results, collections, or explicit posts into deterministic JSON or markdown briefs with source links and metrics."
+    },
+    {
+      "name": "Account snapshots",
+      "command": "account snapshot",
+      "description": "Capture profile basics, public metrics, pinned post, and recent posts for an account by username or user ID."
+    },
+    {
+      "name": "URL mention tracking",
+      "command": "url mentions",
+      "description": "Find recent posts mentioning a URL, domain, repo, article, or product page and optionally save them into a collection or monitor."
+    },
+    {
+      "name": "Post performance tracking",
+      "command": "performance snapshot/backfill/analyze",
+      "description": "Store timestamped post metrics locally, backfill recent account posts when auth allows, and analyze saved snapshots by useful dimensions."
+    },
+    {
+      "name": "Timeline export",
+      "command": "timeline export",
+      "description": "Export an account or query timeline as markdown, JSON, or JSONL for research, notes, archives, or downstream analysis."
+    },
+    {
       "name": "Offline thread reconstruction",
       "command": "thread show",
       "description": "Rebuild a full conversation thread from your locally synced posts — ordered and depth-tagged — without re-spending API read credits."
