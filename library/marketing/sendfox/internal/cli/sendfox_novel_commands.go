@@ -226,7 +226,13 @@ func newContactsImportCSVCmd(flags *rootFlags) *cobra.Command {
 				}
 				created++
 			}
-			return flags.printJSON(cmd, map[string]any{"attempted": len(contacts), "created": created, "failed": len(failures), "failures": failures})
+			if err := flags.printJSON(cmd, map[string]any{"attempted": len(contacts), "created": created, "failed": len(failures), "failures": failures}); err != nil {
+				return err
+			}
+			if created == 0 && len(failures) > 0 {
+				return fmt.Errorf("contacts import-csv failed for all %d contacts", len(failures))
+			}
+			return nil
 		},
 	}
 	cmd.Flags().StringVar(&file, "file", "", "CSV path with email, first_name, last_name headers")

@@ -4,8 +4,14 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -50,6 +56,46 @@ func TestReadContactsCSVEmailOnlyDoesNotUseEmailAsName(t *testing.T) {
 	}
 	if contacts[0].Email != "reader@example.com" || contacts[0].FirstName != "" || contacts[0].LastName != "" {
 		t.Fatalf("email-only CSV should not populate names from email column: %#v", contacts[0])
+	}
+}
+
+func TestContactsImportCSVReturnsErrorWhenAllRowsFail(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/contacts" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}))
+	t.Cleanup(server.Close)
+
+	dir := t.TempDir()
+	csvPath := filepath.Join(dir, "contacts.csv")
+	if err := os.WriteFile(csvPath, []byte("email\nreader1@example.com\nreader2@example.com\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	configPath := filepath.Join(dir, "config.toml")
+	configBody := fmt.Sprintf("base_url = %q\nbearer_auth = %q\n", server.URL, "test-token")
+	if err := os.WriteFile(configPath, []byte(configBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var flags rootFlags
+	cmd := newRootCmd(&flags)
+	var stdout bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs([]string{"--config", configPath, "--json", "--yes", "contacts", "import-csv", "--file", csvPath})
+
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "failed for all 2 contacts") {
+		t.Fatalf("Execute error = %v, want all-rows-failed error", err)
+	}
+	var envelope map[string]any
+	if decodeErr := json.Unmarshal(stdout.Bytes(), &envelope); decodeErr != nil {
+		t.Fatalf("output is not JSON: %v; raw=%q", decodeErr, stdout.String())
+	}
+	if envelope["attempted"] != float64(2) || envelope["created"] != float64(0) || envelope["failed"] != float64(2) {
+		t.Fatalf("unexpected import summary: %#v", envelope)
 	}
 }
 
