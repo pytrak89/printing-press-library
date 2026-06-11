@@ -36,16 +36,16 @@ func newAuthSetupCmd(_ *rootFlags) *cobra.Command {
 		Example: "  sendfox-pp-cli auth setup\n  sendfox-pp-cli auth setup --launch",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			w := cmd.OutOrStdout()
-			fmt.Fprintln(w, "No setup URL is configured for this CLI; check the API's docs.")
+			fmt.Fprintln(w, "Create a SendFox personal access token:")
+			fmt.Fprintln(w, "  https://sendfox.com/account/oauth")
 			fmt.Fprintln(w, "")
 			fmt.Fprintln(w, "Then set:")
 			fmt.Fprintln(w, "  export SENDFOX_API_TOKEN=\"<your-token>\"")
-			fmt.Fprintln(w, "  # compatibility alias: SENDFOX_BEARER_AUTH")
 			fmt.Fprintln(w, "  sendfox-pp-cli auth set-token <token>")
 			if !launch {
 				return nil
 			}
-			fmt.Fprintln(cmd.ErrOrStderr(), "no setup URL configured; cannot launch")
+			fmt.Fprintln(cmd.ErrOrStderr(), "open https://sendfox.com/account/oauth in your browser")
 			return nil
 		},
 	}
@@ -90,7 +90,6 @@ func newAuthStatusCmd(flags *rootFlags) *cobra.Command {
 				fmt.Fprintln(w, "")
 				fmt.Fprintln(w, "Set your token:")
 				fmt.Fprintln(w, "  export SENDFOX_API_TOKEN=\"your-token-here\"")
-				fmt.Fprintln(w, "  # compatibility alias: SENDFOX_BEARER_AUTH")
 				fmt.Fprintf(w, "  sendfox-pp-cli auth set-token <token>\n")
 				return authErr(fmt.Errorf("no credentials configured"))
 			}
@@ -157,6 +156,9 @@ func newAuthLogoutCmd(flags *rootFlags) *cobra.Command {
 			// Identify which (if any) auth env var is still exported so the
 			// JSON envelope and the human prose can both surface it.
 			envStillSet := ""
+			if envStillSet == "" && os.Getenv("SENDFOX_API_TOKEN") != "" {
+				envStillSet = "SENDFOX_API_TOKEN"
+			}
 			if envStillSet == "" && os.Getenv("SENDFOX_BEARER_AUTH") != "" {
 				envStillSet = "SENDFOX_BEARER_AUTH"
 			}

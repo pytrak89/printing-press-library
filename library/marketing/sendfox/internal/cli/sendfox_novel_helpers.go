@@ -117,9 +117,10 @@ func sendfoxFetchAll(c *client.Client, ctx context.Context, path string, params 
 		if len(items) == 0 {
 			break
 		}
-		// Advance until explicit pagination says to stop, an empty page is
-		// returned, or maxPages is reached. SendFox's default page size can be
-		// well below 100, so a short page alone is not a reliable completion signal.
+		// Prefer explicit pagination metadata when SendFox includes it. If no
+		// metadata is present, keep fetching until an empty page or maxPages;
+		// default SendFox page sizes can be far below 100, so a short page alone
+		// is not a reliable end-of-collection signal.
 		var obj map[string]any
 		if json.Unmarshal(raw, &obj) == nil {
 			if v, hasNext := obj["next_page_url"]; hasNext && v != nil && v != "" {

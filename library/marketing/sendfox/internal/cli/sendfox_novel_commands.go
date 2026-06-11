@@ -285,7 +285,7 @@ func renderSignupForm(title, cta string, listID int) (string, error) {
   <label>First name <input name="first_name" autocomplete="given-name"></label>
   <button type="submit">{{.CTA}}</button>
 </form>
-<!-- Server handler: POST https://api.sendfox.com/contacts with Authorization: Bearer $SENDFOX_BEARER_AUTH and body {email, first_name, lists:[{{.ListID}}]} -->
+<!-- Server handler: POST https://api.sendfox.com/contacts with Authorization: Bearer $SENDFOX_API_TOKEN and body {email, first_name, lists:[{{.ListID}}]} -->
 `
 	var b strings.Builder
 	err := template.Must(template.New("form").Parse(tpl)).Execute(&b, map[string]any{"Title": title, "CTA": cta, "ListID": listID})
